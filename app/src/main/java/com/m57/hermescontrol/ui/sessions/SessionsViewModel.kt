@@ -1499,11 +1499,18 @@ class SessionsViewModel(
         val snapshot =
             (safeApiCall { api.getSessionMutationSnapshot(sessionId) } as? NetworkResult.Success)?.data
         val revision =
-            snapshot?.runtimeRevision?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: return null
+            snapshot
+                ?.runtimeRevision
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.toIntOrNull() ?: return null
         return Triple(
             UUID.randomUUID().toString(),
             revision,
-            snapshot.runtimeGeneration?.jsonPrimitive?.contentOrNull?.toIntOrNull(),
+            snapshot.runtimeGeneration
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.toIntOrNull(),
         )
     }
 
