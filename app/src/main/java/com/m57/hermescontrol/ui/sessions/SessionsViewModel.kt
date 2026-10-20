@@ -900,20 +900,16 @@ class SessionsViewModel(
             val fence = mutationFence(ApiClient.hermesApi, sessionId)
             val result =
                 safeApiCall {
-                    if (fence == null) {
-                        ApiClient.hermesApi.renameSession(
-                            sessionId = sessionId,
-                            body = SessionRenameRequest(title = newTitle),
-                        )
-                    } else {
-                        ApiClient.hermesApi.renameSession(
-                            sessionId = sessionId,
-                            body = SessionRenameRequest(title = newTitle),
-                            requestId = fence.first,
-                            expectedRevision = fence.second,
-                            expectedGeneration = fence.third,
-                        )
-                    }
+                    ApiClient.hermesApi.renameSession(
+                        sessionId = sessionId,
+                        body =
+                            SessionRenameRequest(
+                                title = newTitle,
+                                requestId = fence?.first,
+                                expectedRevision = fence?.second,
+                                expectedGeneration = fence?.third,
+                            ),
+                    )
                 }
             when (result) {
                 is NetworkResult.Success -> {
@@ -995,19 +991,17 @@ class SessionsViewModel(
                             SessionRenameRequest(archived = target)
                         }
                     val fence = mutationFence(api, sessionId)
+                    val fenced =
+                        body.copy(
+                            requestId = fence?.first,
+                            expectedRevision = fence?.second,
+                            expectedGeneration = fence?.third,
+                        )
                     val response =
                         if (flag == HistoryFlag.PIN) {
-                            if (fence == null) {
-                                api.setSessionPinned(sessionId, body)
-                            } else {
-                                api.setSessionPinned(sessionId, body, fence.first, fence.second, fence.third)
-                            }
+                            api.setSessionPinned(sessionId, fenced)
                         } else {
-                            if (fence == null) {
-                                api.setSessionArchived(sessionId, body)
-                            } else {
-                                api.setSessionArchived(sessionId, body, fence.first, fence.second, fence.third)
-                            }
+                            api.setSessionArchived(sessionId, fenced)
                         }
                     if (!response.isSuccessful) {
                         return@safeApiCall retrofit2.Response.error<HistoryUndo>(
@@ -1120,19 +1114,17 @@ class SessionsViewModel(
             val result =
                 if (unchanged) {
                     val undoFence = mutationFence(undo.api, undo.sessionId)
+                    val fencedInverse =
+                        undo.inverse.copy(
+                            requestId = undoFence?.first,
+                            expectedRevision = undoFence?.second,
+                            expectedGeneration = undoFence?.third,
+                        )
                     safeApiCall {
                         if (undo.flag == HistoryFlag.PIN) {
-                            if (undoFence == null) {
-                                undo.api.setSessionPinned(undo.sessionId, undo.inverse)
-                            } else {
-                                undo.api.setSessionPinned(undo.sessionId, undo.inverse, undoFence.first, undoFence.second, undoFence.third)
-                            }
+                            undo.api.setSessionPinned(undo.sessionId, fencedInverse)
                         } else {
-                            if (undoFence == null) {
-                                undo.api.setSessionArchived(undo.sessionId, undo.inverse)
-                            } else {
-                                undo.api.setSessionArchived(undo.sessionId, undo.inverse, undoFence.first, undoFence.second, undoFence.third)
-                            }
+                            undo.api.setSessionArchived(undo.sessionId, fencedInverse)
                         }
                     }
                 } else {
@@ -1496,8 +1488,10 @@ class SessionsViewModel(
     }
 
     /** Fence identity for metadata PATCHes, quoted from the same backend that served the
-     *  list (live backends refuse unfenced writes with 409 client_upgrade_required;
-     *  older backends have no snapshot endpoint and take the plain PATCH). */
+     *  list and carried in the request BODY (the PATCH route binds SessionRename from the
+     *  body; unlike DELETE, query params do not reach it). Live backends refuse unfenced
+     *  writes with 409 client_upgrade_required; older backends have no snapshot endpoint,
+     *  send nulls below, and those read as unfenced — the pre-fence plain PATCH. */
     private suspend fun mutationFence(
         api: com.m57.hermescontrol.data.remote.HermesApiService,
         sessionId: String,

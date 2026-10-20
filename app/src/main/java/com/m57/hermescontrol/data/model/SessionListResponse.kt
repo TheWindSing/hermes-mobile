@@ -123,6 +123,14 @@ data class SessionRenameRequest(
     val pinned: Boolean? = null,
     val hidden: Boolean? = null,
     val archived: Boolean? = null,
+    // Mutation fence, quoted from GET api/sessions/{id}/mutation-snapshot. The PATCH
+    // endpoint reads the identity from the BODY (SessionRename: request_id/
+    // expected_revision/expected_generation) — unlike DELETE, which takes query
+    // params. Live backends refuse unfenced writes with 409 client_upgrade_required;
+    // older ones ignore these keys, so sending them unconditionally is safe.
+    @SerialName("request_id") val requestId: String? = null,
+    @SerialName("expected_revision") val expectedRevision: Int? = null,
+    @SerialName("expected_generation") val expectedGeneration: Int? = null,
 )
 
 @Serializable
