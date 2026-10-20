@@ -257,6 +257,11 @@ interface HermesApiService : KanbanApiService {
         // Contract: The server-generated sessionId must only contain URL-safe characters (no ?, #, or spaces).
         @Path("id", encoded = true) sessionId: String,
         @Body body: SessionRenameRequest,
+        // Mutation identity, same contract as DELETE (issue #785's fence protocol): live
+        // backends refuse unfenced metadata writes with 409 client_upgrade_required.
+        @Query("request_id") requestId: String? = null,
+        @Query("expected_revision") expectedRevision: Int? = null,
+        @Query("expected_generation") expectedGeneration: Int? = null,
     ): Response<Unit>
 
     // Pin/unpin rides the same PATCH /api/sessions/{id} — body carries only
@@ -265,6 +270,9 @@ interface HermesApiService : KanbanApiService {
     suspend fun setSessionPinned(
         @Path("id", encoded = true) sessionId: String,
         @Body body: SessionRenameRequest,
+        @Query("request_id") requestId: String? = null,
+        @Query("expected_revision") expectedRevision: Int? = null,
+        @Query("expected_generation") expectedGeneration: Int? = null,
     ): Response<Unit>
 
     // Archive/unarchive rides the same PATCH /api/sessions/{id} — body carries only
@@ -273,6 +281,9 @@ interface HermesApiService : KanbanApiService {
     suspend fun setSessionArchived(
         @Path("id", encoded = true) sessionId: String,
         @Body body: SessionRenameRequest,
+        @Query("request_id") requestId: String? = null,
+        @Query("expected_revision") expectedRevision: Int? = null,
+        @Query("expected_generation") expectedGeneration: Int? = null,
     ): Response<Unit>
 
     @POST("api/sessions/bulk-delete")
